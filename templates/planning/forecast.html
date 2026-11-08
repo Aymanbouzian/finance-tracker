@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Forecast{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Balance forecast</h1>
+
+{% if shortfall_expected %}
+  <div class="alert alert-danger">Expected to run out of money around <strong>{{ shortfall_expected|date:"j M Y" }}</strong>. Lowest expected balance: {{ lowest_value|floatformat:"2g" }} {{ CURRENCY }}.</div>
+{% elif shortfall_low %}
+  <div class="alert alert-warning">If spending runs 25% above your usual, you could run short around <strong>{{ shortfall_low|date:"j M Y" }}</strong>.</div>
+{% else %}
+  <div class="alert alert-success">No shortfall projected in the next {{ days }} days, even with spending 25% above usual.</div>
+{% endif %}
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">{{ form.days.label_tag }}{{ form.days }}</div>
+    <div class="col-md-5">{{ form.daily_spend.label_tag }}{{ form.daily_spend }}<div class="form-text">{{ form.daily_spend.help_text }}</div></div>
+    <div class="col-md-2"><button class="btn btn-primary">Update</button></div>
+  </div>
+  {% for error in form.daily_spend.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Balance today</div><div class="fs-5 fw-semibold">{{ start_balance|floatformat:"2g" }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">In {{ days }} days (expected)</div><div class="fs-5 fw-semibold">{{ end_expected|floatformat:"2g" }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Likely range</div><div class="fs-5 fw-semibold">{{ end_low|floatformat:"2g" }} – {{ end_high|floatformat:"2g" }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Lowest point (expected)</div><div class="fs-5 fw-semibold">{{ lowest_value|floatformat:"2g" }}</div><div class="small text-muted">{{ lowest_date|date:"j M" }}</div></div></div></div>
+</div>
+
+<div class="card shadow-sm mb-3"><div class="card-body"><canvas id="forecast" height="110"></canvas></div></div>
+
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">Upcoming recurring payments</h2>
+    <table class="table table-sm mb-0">
+      <tbody>
+      {% for day, name, amount in events %}
+        <tr><td class="text-muted">{{ day|date:"j M Y" }}</td><td>{{ name }}</td><td class="text-end {% if amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ amount|floatformat:"2g" }}</td></tr>
+      {% empty %}
+        <tr><td class="text-muted">None. <a href="{% url 'recurring-create' %}">Add recurring income and bills</a> for a more useful forecast.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div></div></div>
+  <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">How this is calculated</h2>
+    <ol class="small mb-0">
+      <li>Start from today's real total balance.</li>
+      <li>Add each recurring income and bill on its due date.</li>
+      <li>Subtract <strong>{{ daily|floatformat:"2g" }} {{ CURRENCY }}/day</strong> for everyday spending
+        (your recent average of {{ estimated|floatformat:"2g" }}/day, after removing recurring bills).</li>
+      <li>The range moves everyday spending by ±25%.</li>
+    </ol>
+  </div></div></div>
+</div>
+
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const d = JSON.parse(document.getElementById('chart-data').textContent);
+  new Chart(document.getElementById('forecast'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {label: 'Expected', data: d.expected, borderColor: '#0d6efd', pointRadius: 0, borderWidth: 2},
+        {label: 'Cautious (+25% spending)', data: d.low, borderColor: '#dc3545', borderDash: [6, 4], pointRadius: 0, borderWidth: 1},
+        {label: 'Optimistic (−25% spending)', data: d.high, borderColor: '#198754', borderDash: [6, 4], pointRadius: 0, borderWidth: 1},
+      ],
+    },
+    options: {interaction: {mode: 'index', intersect: false}, scales: {x: {ticks: {maxTicksLimit: 8}}}},
+  });
+</script>
+{% endblock %}

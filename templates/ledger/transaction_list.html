@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="h3 mb-0">Transactions</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'import-csv' %}">Import CSV</a>
+    <a class="btn btn-outline-secondary" href="{% url 'export-csv' %}">Export CSV</a>
+    <a class="btn btn-primary" href="{% url 'transaction-create' %}">+ Add</a>
+  </div>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1">Account</label>
+      <select name="account" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for a in accounts %}<option value="{{ a.pk }}" {% if filters.account == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1">Category</label>
+      <select name="category" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for c in categories %}<option value="{{ c.pk }}" {% if filters.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Type</label>
+      <select name="kind" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for value, label in kinds %}<option value="{{ value }}" {% if filters.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Month</label>
+      <input type="month" name="month" value="{{ filters.month }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-12 col-md-2 d-flex gap-2">
+      <button class="btn btn-sm btn-primary">Filter</button>
+      <a class="btn btn-sm btn-link" href="{% url 'transaction-list' %}">Reset</a>
+    </div>
+  </div>
+</form>
+
+<div class="card shadow-sm"><div class="card-body table-responsive">
+  <table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Category</th><th class="text-end">Amount</th><th></th></tr></thead>
+    <tbody>
+    {% for t in object_list %}
+      <tr>
+        <td class="text-nowrap">{{ t.date|date:"Y-m-d" }}</td>
+        <td>{{ t.description|default:"—" }}</td>
+        <td>{{ t.account }}{% if t.to_account %} → {{ t.to_account }}{% endif %}</td>
+        <td>{% if t.category %}{{ t.category }}{% elif t.kind == 'transfer' %}<span class="text-muted">transfer</span>{% else %}—{% endif %}</td>
+        <td class="text-end text-nowrap {% if t.kind == 'income' %}text-success{% elif t.kind == 'expense' %}text-danger{% else %}text-muted{% endif %}">
+          {% if t.kind == 'expense' %}−{% elif t.kind == 'income' %}+{% endif %}{{ t.amount|floatformat:"2g" }}
+        </td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'transaction-update' t.pk %}">Edit</a>
+          <a class="btn btn-sm btn-outline-danger" href="{% url 'transaction-delete' t.pk %}">Delete</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-muted">No transactions match.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+
+{% if is_paginated %}
+<nav class="mt-3"><ul class="pagination pagination-sm justify-content-center">
+  {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+  <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+  {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+</ul></nav>
+{% endif %}
+{% endblock %}

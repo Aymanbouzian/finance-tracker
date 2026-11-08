@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Import CSV{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-9 col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Import transactions from CSV</h1>
+        <p class="small text-muted">
+          Header row required: <code>date,amount,description</code> and optionally <code>category</code>.
+          Dates: <code>YYYY-MM-DD</code> or <code>DD/MM/YYYY</code>. Negative amounts are expenses, positive are income.
+          Either every row imports or none does.
+        </p>
+        {% if errors %}
+          <div class="alert alert-danger">
+            <strong>{{ error_count }} problem{{ error_count|pluralize }} found — nothing was imported.</strong>
+            <ul class="mb-0">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+            {% if error_count > errors|length %}<div class="small mt-1">…and {{ error_count|add:"-20" }} more.</div>{% endif %}
+          </div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "_form_fields.html" %}
+          <button class="btn btn-primary">Import</button>
+          <a class="btn btn-link" href="{% url 'transaction-list' %}">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

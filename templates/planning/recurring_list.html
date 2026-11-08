@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Recurring{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Recurring income &amp; bills</h1>
+  <a class="btn btn-primary" href="{% url 'recurring-create' %}">+ New</a>
+</div>
+<p class="text-muted">These feed the <a href="{% url 'forecast' %}">forecast</a>. Keep the next date roughly current; later dates are derived from it.</p>
+<div class="card shadow-sm"><div class="card-body table-responsive">
+  <table class="table align-middle mb-0">
+    <thead><tr><th>Name</th><th>Type</th><th class="text-end">Amount</th><th>Repeats</th><th>Next date</th><th></th></tr></thead>
+    <tbody>
+    {% for item in items %}
+      <tr class="{% if not item.active %}text-muted{% endif %}">
+        <td>{{ item.name }}{% if not item.active %} <span class="badge text-bg-secondary">paused</span>{% endif %}</td>
+        <td>{{ item.get_kind_display }}</td>
+        <td class="text-end {% if item.kind == 'income' %}text-success{% else %}text-danger{% endif %}">{{ item.amount|floatformat:"2g" }} {{ CURRENCY }}</td>
+        <td>{{ item.get_frequency_display }}</td>
+        <td>{{ item.next_date|date:"Y-m-d" }}</td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'recurring-update' item.pk %}">Edit</a>
+          <a class="btn btn-sm btn-outline-danger" href="{% url 'recurring-delete' item.pk %}">Delete</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-muted">Nothing yet. Add your salary, rent and other regular payments.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Dashboard</h1>
+  <a class="btn btn-primary" href="{% url 'transaction-create' %}">+ Add transaction</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
+    <div class="text-muted small">Total balance</div>
+    <div class="fs-4 fw-semibold">{{ total|floatformat:"2g" }} {{ CURRENCY }}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
+    <div class="text-muted small">Income · {{ month_label }}</div>
+    <div class="fs-4 fw-semibold text-success">{{ income|floatformat:"2g" }}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
+    <div class="text-muted small">Expenses · {{ month_label }}</div>
+    <div class="fs-4 fw-semibold text-danger">{{ expense|floatformat:"2g" }}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
+    <div class="text-muted small">Net this month</div>
+    <div class="fs-4 fw-semibold {% if net < 0 %}text-danger{% else %}text-success{% endif %}">{{ net|floatformat:"2g" }}</div>
+  </div></div></div>
+</div>
+
+{% if not accounts %}
+  <div class="alert alert-info">You have no accounts yet. <a href="{% url 'account-create' %}">Create your first account</a> to start tracking.</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">Income vs expenses (6 months)</h2>
+    <canvas id="history" height="140"></canvas>
+  </div></div></div>
+  <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">Spending by category · {{ month_label }}</h2>
+    <canvas id="categories" height="200"></canvas>
+    <p id="no-categories" class="text-muted small d-none mb-0">No expenses recorded this month.</p>
+  </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">Accounts</h2>
+    <ul class="list-group list-group-flush">
+      {% for account, balance in accounts %}
+        <li class="list-group-item d-flex justify-content-between px-0"><span>{{ account.name }}</span><span>{{ balance|floatformat:"2g" }} {{ CURRENCY }}</span></li>
+      {% empty %}
+        <li class="list-group-item px-0 text-muted">No accounts.</li>
+      {% endfor %}
+    </ul>
+  </div></div></div>
+  <div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
+    <h2 class="h6">Recent transactions</h2>
+    <table class="table table-sm mb-0">
+      <tbody>
+      {% for t in recent %}
+        <tr>
+          <td class="text-muted">{{ t.date|date:"d M" }}</td>
+          <td>{{ t.description|default:t.get_kind_display }}{% if t.category %} <span class="badge text-bg-light">{{ t.category }}</span>{% endif %}</td>
+          <td class="text-end {% if t.kind == 'income' %}text-success{% elif t.kind == 'expense' %}text-danger{% endif %}">
+            {% if t.kind == 'expense' %}−{% elif t.kind == 'income' %}+{% endif %}{{ t.amount|floatformat:"2g" }}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td class="text-muted">No transactions yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div></div></div>
+</div>
+
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const data = JSON.parse(document.getElementById('chart-data').textContent);
+  new Chart(document.getElementById('history'), {
+    type: 'bar',
+    data: {
+      labels: data.history.labels,
+      datasets: [
+        {label: 'Income', data: data.history.income, backgroundColor: '#198754'},
+        {label: 'Expenses', data: data.history.expense, backgroundColor: '#dc3545'},
+      ],
+    },
+    options: {responsive: true, scales: {y: {beginAtZero: true}}},
+  });
+  if (data.categories.labels.length) {
+    new Chart(document.getElementById('categories'), {
+      type: 'doughnut',
+      data: {labels: data.categories.labels, datasets: [{data: data.categories.values}]},
+      options: {plugins: {legend: {position: 'bottom'}}},
+    });
+  } else {
+    document.getElementById('categories').classList.add('d-none');
+    document.getElementById('no-categories').classList.remove('d-none');
+  }
+</script>
+{% endblock %}

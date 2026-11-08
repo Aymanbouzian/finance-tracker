@@ -1,0 +1,14 @@
+{% extends "form.html" %}
+{% block scripts %}
+<script>
+  // Show the destination account only for transfers, and the category only otherwise.
+  const kind = document.getElementById('id_kind');
+  const toggle = () => {
+    const transfer = kind.value === 'transfer';
+    document.getElementById('wrap-to_account').style.display = transfer ? '' : 'none';
+    document.getElementById('wrap-category').style.display = transfer ? 'none' : '';
+  };
+  kind.addEventListener('change', toggle);
+  toggle();
+</script>
+{% endblock %}

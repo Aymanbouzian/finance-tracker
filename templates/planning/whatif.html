@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}What-if simulator{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">What-if simulator</h1>
+<p class="text-muted">Test a decision against your forecast before you make it.</p>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  {% include "_form_fields.html" %}
+  <div><button class="btn btn-primary">Simulate</button></div>
+</form>
+
+{% if result %}
+  {% if result.scenario_shortfall %}
+    <div class="alert alert-danger">With this change you are expected to run out of money around <strong>{{ result.scenario_shortfall|date:"j M Y" }}</strong>.</div>
+  {% elif result.scenario_shortfall_low %}
+    <div class="alert alert-warning">Expected balance stays positive, but with 25% higher spending you could run short around <strong>{{ result.scenario_shortfall_low|date:"j M Y" }}</strong>.</div>
+  {% else %}
+    <div class="alert alert-success">Your balance stays positive over the whole period, even with spending 25% above usual.</div>
+  {% endif %}
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">End balance without the change</div><div class="fs-5 fw-semibold">{{ result.baseline_end|floatformat:"2g" }} {{ CURRENCY }}</div></div></div></div>
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">End balance with the change</div><div class="fs-5 fw-semibold">{{ result.scenario_end|floatformat:"2g" }} {{ CURRENCY }}</div></div></div></div>
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Difference</div><div class="fs-5 fw-semibold {% if result.difference < 0 %}text-danger{% else %}text-success{% endif %}">{{ result.difference|floatformat:"2g" }} {{ CURRENCY }}</div></div></div></div>
+  </div>
+
+  <div class="card shadow-sm mb-3"><div class="card-body">
+    <canvas id="whatif" height="110"></canvas>
+    <p class="small text-muted mt-2 mb-0">
+      Lowest expected balance: {{ result.baseline_min.1|floatformat:"2g" }} without the change
+      ({{ result.baseline_min.0|date:"j M" }}), {{ result.scenario_min.1|floatformat:"2g" }} with it ({{ result.scenario_min.0|date:"j M" }}).
+      Cautious end balance with the change: {{ result.scenario_end_low|floatformat:"2g" }}.
+    </p>
+  </div></div>
+  {{ result.chart|json_script:"chart-data" }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const d = JSON.parse(document.getElementById('chart-data').textContent);
+  new Chart(document.getElementById('whatif'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {label: 'Without the change', data: d.baseline, borderColor: '#6c757d', borderDash: [6, 4], pointRadius: 0, borderWidth: 2},
+        {label: 'With the change', data: d.scenario, borderColor: '#0d6efd', pointRadius: 0, borderWidth: 2},
+      ],
+    },
+    options: {interaction: {mode: 'index', intersect: false}, scales: {x: {ticks: {maxTicksLimit: 8}}}},
+  });
+</script>
+{% endif %}
+{% endblock %}
