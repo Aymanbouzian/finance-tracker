@@ -1,10 +1,14 @@
 # PocketLedger
 
-**Flutter is now the primary interface at `/app/`.** Build the `flutter_app` project before opening the root URL; see [Flutter setup](flutter_app/README.md). This document describes the backend and the retained classic interface at `/classic/`, including CSV import/export.
+PocketLedger is a self-hosted Flutter and Django finance tracker for managing monthly budgets and seeing how a purchase would affect your cash balance.
 
-Your money, with a little more clarity. PocketLedger is a self-hosted personal finance app for tracking spending, setting monthly budgets, and looking ahead before making a purchase. One responsive app works on desktop and mobile and can be installed from a supporting browser.
+![PocketLedger demo dashboard with cash balances, monthly income and spending, and a 30-day outlook](flutter_app/docs/screenshots/desktop.jpg)
 
-The project builds on the supplied Finance Tracker Django app. [ezBookkeeping](https://github.com/mayswind/ezbookkeeping) inspired the self-hosted, cross-device approach; this is an independent implementation with its own planning experience.
+## What changed from the original app
+
+The [original Django tracker](https://github.com/Aymanbouzian/finance-tracker/tree/2e0caefbdabc326420eac3ddf3bffeea53995b5a) already handled accounts, transfers, CSV import and export, cash-flow forecasts, what-if purchases and savings goals. It also included a Docker setup for PostgreSQL.
+
+PocketLedger added the Flutter interface and the session-authenticated JSON API it uses. It also added monthly category budgets, spending-pace calculations, an installable web app and an optional read-only Ollama assistant. Both interfaces share one Django ledger. The cross-device design drew inspiration from [ezBookkeeping](https://github.com/mayswind/ezbookkeeping).
 
 ## What you can do
 
@@ -31,7 +35,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
-Open [PocketLedger locally](http://127.0.0.1:8000), register an account, and create your first money account. These commands call the virtual environment directly; changing PowerShell's execution policy is unnecessary.
+Open the [classic dashboard](http://127.0.0.1:8000/classic/), register an account and create your first money account. To use the Flutter dashboard shown above, follow the [Flutter web build instructions](flutter_app/README.md#run-the-web-app-with-django), then open [/app/](http://127.0.0.1:8000/app/).
 
 ## Quick start on macOS / Linux
 
@@ -42,7 +46,7 @@ python3 -m venv .venv
 .venv/bin/python manage.py runserver
 ```
 
-SQLite is used by default. To explore sample records first, run `python manage.py seed_demo` using your virtual environment's Python. It creates the local demonstration login `demo` / `demo12345` and skips an existing demo account. Do not seed this known password on a public server. New personal accounts start with their own empty records and default categories.
+Open the [classic dashboard](http://127.0.0.1:8000/classic/), or [build the Flutter interface](flutter_app/README.md#run-the-web-app-with-django) and open [/app/](http://127.0.0.1:8000/app/). SQLite is used by default. To explore sample records first, run `python manage.py seed_demo` using your virtual environment's Python. It creates the local demonstration login `demo` / `demo12345` and skips an existing demo account. Do not seed this known password on a public server. New personal accounts start with their own empty records and default categories.
 
 For Django's administrative interface, run `python manage.py createsuperuser`, then visit `/admin/`.
 
@@ -88,7 +92,7 @@ Then run:
 docker compose up --build
 ```
 
-Open [PocketLedger on Docker](http://localhost:8000). The container runs migrations, collects static assets, and starts Gunicorn with a 90-second worker timeout. PostgreSQL records persist in the `pgdata` named volume. Do not remove that volume when you need to keep your records.
+Open the [classic dashboard](http://localhost:8000/classic/). To include the Flutter dashboard in the image, build the [Flutter web client](flutter_app/README.md#run-the-web-app-with-django) before running the Compose command. The container runs migrations, collects static assets, and starts Gunicorn with a 90-second worker timeout. PostgreSQL records persist in the `pgdata` named volume. Do not remove that volume when you need to keep your records.
 
 Ollama is optional and is not started or downloaded by Compose. To use Ollama running on the host, set `OLLAMA_ENABLED=1` and `OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`. The Compose configuration includes the host-gateway mapping. Ollama must listen on an address reachable from the container; keep its API private. See the [AI guide](docs/LOCAL_AI.md) before exposing any additional network listener.
 
@@ -176,5 +180,4 @@ static/       App styling/scripts, bundled vendors and PWA icons
 docs/         Installation and local AI guides
 ```
 
-See [third-party notices](THIRD_PARTY_NOTICES.md) for inspiration, bundled libraries and model attribution. Future work can build on this foundation with tested bank import formats, receipt-assisted entry, forecast backtesting, shared households and multi-currency accounting.
-
+See [third-party notices](THIRD_PARTY_NOTICES.md) for inspiration, bundled libraries and model attribution.
