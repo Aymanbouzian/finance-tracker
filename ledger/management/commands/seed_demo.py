@@ -10,6 +10,7 @@ from ledger.dates import add_months
 from ledger.models import Account, Category, Transaction
 from ledger.services import create_default_categories
 from planning.models import RecurringItem, SavingsGoal
+from budgets.models import Budget
 
 DEMO_USER = "demo"
 DEMO_PASSWORD = "demo12345"
@@ -75,4 +76,6 @@ class Command(BaseCommand):
             user=user, name="New laptop", target_amount=Decimal("8000"),
             saved_so_far=Decimal("1000"), target_date=add_months(today, 6),
         )
+        for category, amount in [("Food", "1800"), ("Transport", "700"), ("Entertainment", "500")]:
+            Budget.objects.create(user=user, category=cat[category], month=this_month, amount=Decimal(amount))
         self.stdout.write(self.style.SUCCESS(f"Created demo user '{DEMO_USER}' with password '{DEMO_PASSWORD}'."))

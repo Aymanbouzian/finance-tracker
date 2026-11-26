@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
@@ -32,13 +33,14 @@ class Account(models.Model):
     @property
     def balance(self):
         """Opening balance + income - expenses - transfers out + transfers in."""
-        own = self.transactions
+        today = timezone.localdate()
+        own = self.transactions.filter(date__lte=today)
         return (
             self.opening_balance
             + _total(own.filter(kind=Transaction.INCOME))
             - _total(own.filter(kind=Transaction.EXPENSE))
             - _total(own.filter(kind=Transaction.TRANSFER))
-            + _total(self.incoming_transfers.all())
+            + _total(self.incoming_transfers.filter(date__lte=today))
         )
 
 
@@ -89,6 +91,8 @@ class Transaction(models.Model):
 
     def clean(self):
         errors = {}
+        if isinstance(self.date, date) and self.date > timezone.localdate():
+            errors["date"] = "Transactions must be dated today or earlier. Use recurring bills or the what-if planner for future items."
         if self.kind == self.TRANSFER:
             self.category = None
             if not self.to_account_id:

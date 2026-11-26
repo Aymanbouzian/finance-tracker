@@ -16,6 +16,7 @@ from django.views import generic
 
 from .forms import AccountForm, CategoryForm, CSVImportForm, RegisterForm, TransactionForm
 from .importer import parse_csv
+from .insights import dashboard_insights
 from .mixins import UserFormMixin, UserQuerysetMixin
 from .models import Account, Category, Transaction
 from .services import (
@@ -46,8 +47,8 @@ def dashboard(request):
     today = timezone.localdate()
     accounts = [(a, a.balance) for a in Account.objects.filter(user=request.user)]
     month_start, month_end = month_bounds(today.year, today.month)
-    income, expense = totals_between(request.user, month_start, month_end)
-    breakdown = expense_breakdown(request.user, month_start, month_end)
+    income, expense = totals_between(request.user, month_start, today)
+    breakdown = expense_breakdown(request.user, month_start, today)
     history = monthly_history(request.user, today)
     chart = {
         "categories": {"labels": [n for n, _ in breakdown], "values": [float(v) for _, v in breakdown]},
@@ -65,8 +66,11 @@ def dashboard(request):
         "net": income - expense,
         "month_label": today.strftime("%B %Y"),
         "chart": chart,
-        "recent": request.user.transactions.select_related("account", "category", "to_account")[:8],
+        "history_rows": history,
+        "recent": request.user.transactions.filter(date__lte=today).select_related("account", "category", "to_account")[:5],
+        "today": today,
     }
+    context.update(dashboard_insights(request.user, today, breakdown))
     return render(request, "ledger/dashboard.html", context)
 
 
@@ -160,6 +164,9 @@ class TransactionList(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         queryset = self.request.user.transactions.select_related("account", "to_account", "category")
         params = self.request.GET
+        search = params.get("q", "").strip()[:200]
+        if search:
+            queryset = queryset.filter(Q(description__icontains=search) | Q(category__name__icontains=search) | Q(account__name__icontains=search))
         account_id = _to_int(params.get("account"))
         if account_id:
             queryset = queryset.filter(Q(account_id=account_id) | Q(to_account_id=account_id))

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Money assistant{% endblock %}
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div><div class="eyebrow text-muted small mb-1">A LITTLE CLARITY GOES A LONG WAY</div><h1 class="h3 mb-2">Your money companion</h1><p class="text-muted mb-0">Understand the numbers. Find your next small step.</p></div>
+  <span class="badge {% if ai_status.ready %}text-bg-success{% else %}text-bg-light{% endif %} p-2">Ollama · {{ ai_status.label }}</span>
+</div>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card mb-4"><div class="card-body p-4">
+      <h2 class="h5 mb-3">A snapshot of your month</h2>
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4"><div class="text-muted small">Money in</div><div class="fs-4 fw-semibold text-success">{{ summary.month_to_date_income|floatformat:"2g" }}</div></div>
+        <div class="col-sm-4"><div class="text-muted small">Money out</div><div class="fs-4 fw-semibold">{{ summary.month_to_date_expenses|floatformat:"2g" }}</div></div>
+        <div class="col-sm-4"><div class="text-muted small">Net this month</div><div class="fs-4 fw-semibold">{{ summary.month_to_date_net|floatformat:"2g" }}</div></div>
+      </div>
+      <p class="text-muted small mb-0">{{ CURRENCY }} · Month to date, through {{ summary.as_of }}. Calculated from your records, without AI.</p>
+      {% if summary.possible_shortfall_date %}<div class="alert alert-warning mt-3 mb-0">Your cautious forecast drops below zero on {{ summary.possible_shortfall_date }}. <a href="{% url 'forecast' %}">Review the assumptions and upcoming bills.</a></div>{% endif %}
+    </div></div>
+    <div class="card"><div class="card-body p-4">
+      <h2 class="h5">Ask about your money</h2>
+      <p class="text-muted">A read-only assistant powered by your own model. Your question and the summary you approve go to your configured server.</p>
+      <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Example questions">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-question="What stands out in my spending this month?">Understand my spending</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-question="Explain my 30-day forecast and its assumptions.">Explain my forecast</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-question="Based on this snapshot, suggest three practical budgeting steps.">Find my next step</button>
+      </div>
+      {% if assistant_error %}<div class="alert alert-warning" role="alert">{{ assistant_error }}</div>{% endif %}
+      <form method="post" id="assistant-form">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.question.id_for_label }}">{{ form.question.label }}</label>
+          {{ form.question }}
+          {% for error in form.question.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <details class="mb-3"><summary class="small">Preview exactly which financial data is shared</summary><pre class="small bg-light p-3 mt-2 rounded" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ snapshot_json }}</pre></details>
+        <div class="form-check mb-3">
+          {{ form.share_summary }}
+          <label class="form-check-label small" for="{{ form.share_summary.id_for_label }}">{{ form.share_summary.label }}</label>
+          {% for error in form.share_summary.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <button class="btn btn-primary" id="assistant-submit" {% if not ai_config.enabled %}disabled{% endif %}>Ask my companion</button>
+        <span class="small text-muted ms-2" id="assistant-progress" role="status"></span>
+      </form>
+      {% if answer %}<section class="mt-4 p-3 rounded bg-light" aria-label="AI answer"><div class="small text-muted mb-2">{{ ai_config.model }} · AI-generated explanation</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ answer }}</div><p class="small text-muted mt-3 mb-0">Check the figures against your records. Forecasts are estimates.</p></section>{% endif %}
+    </div></div>
+  </div>
+  <aside class="col-lg-4">
+    <div class="card mb-4"><div class="card-body p-4">
+      <h2 class="h6">Your model. Your control.</h2>
+      <p class="text-muted small">{{ ai_status.detail }}</p>
+      <dl class="small mb-3"><dt>Model</dt><dd>{{ ai_config.model }}</dd><dt>Connection</dt><dd style="overflow-wrap:anywhere">{{ ai_config.base_url }}</dd></dl>
+      <ul class="small text-muted ps-3 mb-0"><li class="mb-2">No account names or transaction descriptions in the summary.</li><li class="mb-2">Nothing is sent until you approve and ask.</li><li class="mb-2">The assistant cannot edit transactions or move money.</li><li>Questions and answers are not saved by PocketLedger.</li></ul>
+    </div></div>
+    <div class="card"><div class="card-body p-4">
+      <h2 class="h6">Connect local AI</h2>
+      <p class="text-muted small">On the computer running PocketLedger, install <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">Ollama</a>, then download the model:</p>
+      <pre class="small bg-light rounded p-2" style="white-space:pre-wrap">ollama pull qwen3:4b</pre>
+      <p class="text-muted small mb-2">Enable <code>OLLAMA_ENABLED=1</code> in the app's server environment and restart it. The local default is <code>http://127.0.0.1:11434</code>.</p>
+      <p class="text-muted small mb-0">On your phone, the model runs on your app server. Keep that server reachable. See <code>docs/LOCAL_AI.md</code> for Docker setup and model choices.</p>
+    </div></div>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'assistant.js' %}" defer></script>{% endblock %}
+

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Budgets{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div><p class="text-muted small mb-1">MAKE ROOM FOR WHAT MATTERS</p><h1 class="h3 mb-2">A plan for every category.</h1><p class="text-muted mb-0">Give your spending a little direction. Keep the flexibility.</p></div>
+  <a class="btn btn-primary" href="{% url 'budget-create' %}?month={{ selected_month }}">+ Set a budget</a>
+</div>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <form method="get" class="d-flex align-items-center gap-2"><label for="budget-month" class="visually-hidden">Budget month</label><input type="month" name="month" id="budget-month" value="{{ selected_month }}" class="form-control"><button class="btn btn-outline-secondary" type="submit">View</button></form>
+  <span class="text-muted small">{{ summary.elapsed_days }} of {{ summary.days_in_month }} days elapsed · {{ summary.month_label }}</span>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><p class="text-muted small mb-2">Total planned</p><div class="fs-3 fw-semibold">{{ summary.total_budget|floatformat:"2g" }} <span class="fs-6 text-muted">{{ CURRENCY }}</span></div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><p class="text-muted small mb-2">Spent in budgeted categories</p><div class="fs-3 fw-semibold">{{ summary.total_spent|floatformat:"2g" }} <span class="fs-6 text-muted">{{ CURRENCY }}</span></div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><p class="text-muted small mb-2">Remaining across budgets</p><div class="fs-3 fw-semibold {% if summary.total_remaining < 0 %}text-danger{% else %}text-success{% endif %}">{{ summary.total_remaining|floatformat:"2g" }} <span class="fs-6 text-muted">{{ CURRENCY }}</span></div></div></div></div>
+</div>
+{% if summary.unbudgeted_spent %}<div class="alert alert-info">{{ summary.unbudgeted_spent|floatformat:"2g" }} {{ CURRENCY }} was spent outside your budgeted categories this month. <a href="{% url 'transaction-list' %}?month={{ selected_month }}">Review transactions</a></div>{% endif %}
+<div class="row g-3">
+{% for row in summary.rows %}
+  <div class="col-12 col-lg-6"><section class="card h-100"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-4"><h2 class="h5 mb-0">{{ row.category.name }}</h2><span class="badge {% if row.status == 'over' %}text-bg-danger{% elif row.status == 'ahead' %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ row.status_label }}</span></div>
+    <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2"><div><strong class="fs-4">{{ row.spent|floatformat:"2g" }}</strong> <span class="text-muted small">{{ CURRENCY }} spent</span></div><span class="text-muted small">of {{ row.amount|floatformat:"2g" }}</span></div>
+    <div class="progress mb-3" style="height: 9px" role="progressbar" aria-label="{{ row.category.name }} budget used" aria-valuenow="{{ row.percent|floatformat:'0' }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar {% if row.status == 'over' %}bg-danger{% elif row.status == 'ahead' %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ row.percent|floatformat:'0' }}%"></div></div>
+    <div class="d-flex justify-content-between flex-wrap gap-2 small mb-3"><span class="{% if row.over_amount %}text-danger{% else %}text-muted{% endif %}">{% if row.over_amount %}{{ row.over_amount|floatformat:"2g" }} {{ CURRENCY }} over limit{% else %}{{ row.remaining|floatformat:"2g" }} {{ CURRENCY }} left{% endif %}</span><span class="text-muted">{{ row.used_percent|floatformat:"0" }}% used</span></div>
+    <div class="border-top pt-3 d-flex justify-content-between align-items-center gap-2"><span class="small text-muted">At an even pace: {{ row.expected_spend|floatformat:"2g" }} {{ CURRENCY }}</span><div class="d-flex gap-2"><a href="{% url 'budget-update' row.budget.pk %}" class="btn btn-sm btn-outline-secondary" aria-label="Edit {{ row.category.name }} budget">Edit</a><a href="{% url 'budget-delete' row.budget.pk %}" class="btn btn-sm btn-link text-danger" aria-label="Delete {{ row.category.name }} budget">Delete</a></div></div>
+  </div></section></div>
+{% empty %}
+  <div class="col-12"><div class="card"><div class="card-body text-center py-5"><h2 class="h4">Start with one category.</h2><p class="text-muted mx-auto" style="max-width: 450px">Food, transport, or something you want to spend less on. Set a monthly limit and your transactions will do the rest.</p><a href="{% url 'budget-create' %}?month={{ selected_month }}" class="btn btn-primary">Create your first budget</a></div></div></div>
+{% endfor %}
+</div>
+<p class="small text-muted mt-4">Pacing compares spending with the fraction of the month elapsed. A bill paid early can be ahead of pace without exceeding your budget. Budgets apply to the selected month; they do not automatically repeat.</p>
+{% endblock %}
+

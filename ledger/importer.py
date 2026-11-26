@@ -10,6 +10,8 @@ import io
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
+from django.utils import timezone
+
 from .models import Transaction
 
 DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y")
@@ -40,6 +42,8 @@ def parse_amount(value):
     if not amount.is_finite() or abs(amount) >= Decimal("1e10"):
         raise ValueError(f"invalid amount '{value}'")
     amount = amount.quantize(CENT)
+    if abs(amount) >= Decimal("1e10"):
+        raise ValueError("amount exceeds the maximum of 9,999,999,999.99 after rounding")
     if amount == 0:
         raise ValueError("amount is zero")
     return amount
@@ -50,42 +54,51 @@ def parse_csv(text, categories):
 
     Nothing should be saved unless `errors` is empty.
     """
-    reader = csv.DictReader(io.StringIO(text))
-    headers = {(h or "").strip().lower() for h in (reader.fieldnames or [])}
+    reader = csv.DictReader(io.StringIO(text), strict=True)
+    try:
+        headers = {(h or "").strip().lower() for h in (reader.fieldnames or [])}
+    except csv.Error:
+        return [], ["The CSV header could not be read. Check its quoting and shorten oversized fields."]
     missing = REQUIRED_COLUMNS - headers
     if missing:
         return [], [f"Missing column(s): {', '.join(sorted(missing))}"]
 
     rows, errors = [], []
-    for line_no, raw in enumerate(reader, start=2):
-        if line_no > MAX_ROWS + 1:
-            errors.append(f"Too many rows (maximum {MAX_ROWS}).")
-            break
-        row = {}
-        for key, value in raw.items():
-            if key is None:
+    today = timezone.localdate()
+    try:
+        for line_no, raw in enumerate(reader, start=2):
+            if line_no > MAX_ROWS + 1:
+                errors.append(f"Too many rows (maximum {MAX_ROWS}).")
+                break
+            row = {}
+            for key, value in raw.items():
+                if key is None:
+                    continue
+                row[key.strip().lower()] = (value or "").strip()
+            if not any(row.values()):
                 continue
-            row[key.strip().lower()] = (value or "").strip()
-        if not any(row.values()):
-            continue
-        try:
-            when = parse_date(row["date"])
-            amount = parse_amount(row["amount"])
-        except ValueError as exc:
-            errors.append(f"Line {line_no}: {exc}")
-            continue
+            try:
+                when = parse_date(row["date"])
+                if when > today:
+                    raise ValueError("transactions must be dated today or earlier. Use recurring bills or the what-if planner for future items.")
+                amount = parse_amount(row["amount"])
+            except ValueError as exc:
+                errors.append(f"Line {line_no}: {exc}")
+                continue
 
-        kind = Transaction.INCOME if amount > 0 else Transaction.EXPENSE
-        category = categories.get(row.get("category", "").lower())
-        if category is not None and category.kind != kind:
-            category = None
-        rows.append(
-            {
-                "date": when,
-                "amount": abs(amount),
-                "kind": kind,
-                "description": row["description"][:200],
-                "category": category,
-            }
-        )
+            kind = Transaction.INCOME if amount > 0 else Transaction.EXPENSE
+            category = categories.get(row.get("category", "").lower())
+            if category is not None and category.kind != kind:
+                category = None
+            rows.append(
+                {
+                    "date": when,
+                    "amount": abs(amount),
+                    "kind": kind,
+                    "description": row["description"][:200],
+                    "category": category,
+                }
+            )
+    except csv.Error:
+        return [], errors + ["The CSV could not be read. Check its quoting and shorten oversized fields. No rows were imported."]
     return rows, errors

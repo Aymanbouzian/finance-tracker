@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Install PocketLedger{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <p class="text-muted small mb-2">TAKE YOUR FINANCES WITH YOU</p>
+  <h1 class="h2">One app. Every screen.</h1>
+  <p class="text-muted">Add PocketLedger to your phone or desktop for a dedicated app window and a home-screen shortcut.</p>
+</div>
+<div class="card mb-4"><div class="card-body p-4">
+  <h2 class="h5">Install on this device</h2>
+  <p>Use the button when your browser offers installation, or follow the steps below.</p>
+  <a class="btn btn-primary" href="{% url 'pwa-install' %}" data-pwa-install>Install PocketLedger</a>
+  <p class="small text-muted mt-3 mb-0" data-pwa-status role="status" hidden></p>
+</div></div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card h-100"><div class="card-body p-4">
+    <h2 class="h5">Android</h2>
+    <p class="text-muted mb-0">Open this app in Chrome. Open the browser menu, choose <strong>Install app</strong> or <strong>Add to Home screen</strong>, then confirm.</p>
+  </div></div></div>
+  <div class="col-md-4"><div class="card h-100"><div class="card-body p-4">
+    <h2 class="h5">iPhone &amp; iPad</h2>
+    <p class="text-muted mb-0">Open this app in Safari. Tap <strong>Share</strong>, choose <strong>Add to Home Screen</strong>, and tap <strong>Add</strong>.</p>
+  </div></div></div>
+  <div class="col-md-4"><div class="card h-100"><div class="card-body p-4">
+    <h2 class="h5">Desktop</h2>
+    <p class="text-muted mb-0">In Chrome or Edge, use the install icon in the address bar or the browser menu. In Safari on supported Macs, choose <strong>File → Add to Dock</strong>.</p>
+  </div></div></div>
+</div>
+<div class="card"><div class="card-body p-4">
+  <h2 class="h5">Your devices, connected to your server</h2>
+  <p class="text-muted">Open the same server address and sign in with the same account on each device to access your records. Your server must be running and reachable.</p>
+  <p class="text-muted mb-0">Installation needs HTTPS, or localhost on the device running the server. This version needs a connection to view and save financial records. If the connection drops, the app shows a reconnect screen; it does not save records offline.</p>
+</div></div>
+{% endblock %}

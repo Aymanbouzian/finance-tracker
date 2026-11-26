@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}What-if simulator{% endblock %}
 {% block content %}
 <h1 class="h3 mb-3">What-if simulator</h1>
@@ -38,7 +39,7 @@
 
 {% block scripts %}
 {% if result %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
 <script>
   const d = JSON.parse(document.getElementById('chart-data').textContent);
   new Chart(document.getElementById('whatif'), {
@@ -47,7 +48,7 @@
       labels: d.labels,
       datasets: [
         {label: 'Without the change', data: d.baseline, borderColor: '#6c757d', borderDash: [6, 4], pointRadius: 0, borderWidth: 2},
-        {label: 'With the change', data: d.scenario, borderColor: '#0d6efd', pointRadius: 0, borderWidth: 2},
+        {label: 'With the change', data: d.scenario, borderColor: '#174e40', pointRadius: 0, borderWidth: 2},
       ],
     },
     options: {interaction: {mode: 'index', intersect: false}, scales: {x: {ticks: {maxTicksLimit: 8}}}},

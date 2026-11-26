@@ -1,104 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% load static %}
+{% block title %}Overview{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Dashboard</h1>
-  <a class="btn btn-primary" href="{% url 'transaction-create' %}">+ Add transaction</a>
+<div class="page-heading">
+  <div><div class="eyebrow">YOUR MONEY, AT A GLANCE</div><h1>A little more clarity.</h1><p>Welcome back, {{ user.first_name|default:user.username }}. Let’s make room for what matters.</p></div>
+  <div class="heading-actions"><span class="date-chip">▦ &nbsp; {{ month_label }}</span><a class="btn btn-primary" href="{% url 'transaction-create' %}">+ &nbsp; Add transaction</a></div>
 </div>
-
-<div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
-    <div class="text-muted small">Total balance</div>
-    <div class="fs-4 fw-semibold">{{ total|floatformat:"2g" }} {{ CURRENCY }}</div>
-  </div></div></div>
-  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
-    <div class="text-muted small">Income · {{ month_label }}</div>
-    <div class="fs-4 fw-semibold text-success">{{ income|floatformat:"2g" }}</div>
-  </div></div></div>
-  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
-    <div class="text-muted small">Expenses · {{ month_label }}</div>
-    <div class="fs-4 fw-semibold text-danger">{{ expense|floatformat:"2g" }}</div>
-  </div></div></div>
-  <div class="col-6 col-lg-3"><div class="card shadow-sm"><div class="card-body">
-    <div class="text-muted small">Net this month</div>
-    <div class="fs-4 fw-semibold {% if net < 0 %}text-danger{% else %}text-success{% endif %}">{{ net|floatformat:"2g" }}</div>
-  </div></div></div>
-</div>
-
 {% if not accounts %}
-  <div class="alert alert-info">You have no accounts yet. <a href="{% url 'account-create' %}">Create your first account</a> to start tracking.</div>
+<div class="insight-strip"><span class="insight-mark">✧</span><div><strong>Your next chapter starts here.</strong><p>Add an account, record your first transaction, then give your money a plan.</p></div><a href="{% url 'account-create' %}">Create an account →</a></div>
 {% endif %}
-
-<div class="row g-3 mb-4">
-  <div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
-    <h2 class="h6">Income vs expenses (6 months)</h2>
-    <canvas id="history" height="140"></canvas>
-  </div></div></div>
-  <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body">
-    <h2 class="h6">Spending by category · {{ month_label }}</h2>
-    <canvas id="categories" height="200"></canvas>
-    <p id="no-categories" class="text-muted small d-none mb-0">No expenses recorded this month.</p>
-  </div></div></div>
+<div class="metrics">
+  <div class="card metric metric-primary"><div class="metric-label">Total balance <span class="metric-symbol">▣</span></div><div class="metric-value">{{ total|floatformat:"2g" }}<small>{{ CURRENCY }}</small></div><div class="metric-foot">Across {{ accounts|length }} account{{ accounts|length|pluralize }} · as of today</div></div>
+  <div class="card metric"><div class="metric-label">Money in <span class="metric-symbol">↙</span></div><div class="metric-value">{{ income|floatformat:"2g" }}<small>{{ CURRENCY }}</small></div><div class="metric-foot">Income received this month</div></div>
+  <div class="card metric"><div class="metric-label">Money out <span class="metric-symbol">↗</span></div><div class="metric-value">{{ expense|floatformat:"2g" }}<small>{{ CURRENCY }}</small></div><div class="metric-foot">Spent this month · transfers excluded</div></div>
+  <div class="card metric"><div class="metric-label">Your 30-day outlook <span class="metric-symbol">⌁</span></div><div class="metric-value">{{ outlook|floatformat:"2g" }}<small>{{ CURRENCY }}</small></div><div class="metric-foot">Estimated balance <a href="{% url 'forecast' %}">· see forecast ↗</a></div></div>
 </div>
-
-<div class="row g-3">
-  <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body">
-    <h2 class="h6">Accounts</h2>
-    <ul class="list-group list-group-flush">
-      {% for account, balance in accounts %}
-        <li class="list-group-item d-flex justify-content-between px-0"><span>{{ account.name }}</span><span>{{ balance|floatformat:"2g" }} {{ CURRENCY }}</span></li>
-      {% empty %}
-        <li class="list-group-item px-0 text-muted">No accounts.</li>
-      {% endfor %}
-    </ul>
-  </div></div></div>
-  <div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
-    <h2 class="h6">Recent transactions</h2>
-    <table class="table table-sm mb-0">
-      <tbody>
-      {% for t in recent %}
-        <tr>
-          <td class="text-muted">{{ t.date|date:"d M" }}</td>
-          <td>{{ t.description|default:t.get_kind_display }}{% if t.category %} <span class="badge text-bg-light">{{ t.category }}</span>{% endif %}</td>
-          <td class="text-end {% if t.kind == 'income' %}text-success{% elif t.kind == 'expense' %}text-danger{% endif %}">
-            {% if t.kind == 'expense' %}−{% elif t.kind == 'income' %}+{% endif %}{{ t.amount|floatformat:"2g" }}
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td class="text-muted">No transactions yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div></div></div>
+{% if shortfall %}
+<div class="insight-strip warning-strip"><span class="insight-mark">↘</span><div><strong>A little planning can make a difference.</strong><p>The cautious forecast falls below zero on {{ shortfall|date:"j M" }}. Review your upcoming bills and spending estimate.</p></div><a href="{% url 'forecast' %}">Explore forecast →</a></div>
+{% elif spending_alerts %}
+<div class="insight-strip"><span class="insight-mark">✧</span><div><strong>A spending pattern worth a look.</strong><p>{{ spending_alerts.0.category }} spending is {{ spending_alerts.0.percent }}% higher than the same period last month (+{{ spending_alerts.0.change|floatformat:"2g" }} {{ CURRENCY }}).</p></div><a href="{% url 'budget-list' %}">Review your budgets →</a></div>
+{% else %}
+<div class="insight-strip"><span class="insight-mark">✧</span><div><strong>{% if history_days %}See tomorrow a little more clearly.{% else %}Small steps. A clearer picture.{% endif %}</strong><p>{% if history_days %}Your forecast uses recurring bills and {{ daily_spend|floatformat:"2g" }} {{ CURRENCY }}/day in estimated everyday spending. Adjust it as life changes.{% else %}Record your spending and add recurring bills to start building a useful forecast.{% endif %}</p></div><a href="{% url 'what-if' %}">Try a what-if →</a></div>
+{% endif %}
+<div class="dashboard-main">
+  <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>The bigger picture</h2><p>Money in and out over the last six months</p></div><a class="subtle-link" href="{% url 'forecast' %}">Look ahead ↗</a></div><div class="cash-chart"><canvas id="history" role="img" aria-label="Income and expenses over six months"></canvas></div><div class="chart-legend"><span><i></i>Income</span><span><i class="light"></i>Expenses</span><span class="ms-auto">{{ CURRENCY }}</span></div><details class="chart-data-table"><summary>View chart data</summary><table class="table"><thead><tr><th>Month</th><th>Income</th><th>Expenses</th></tr></thead><tbody>{% for row in history_rows %}<tr><td>{{ row.label }}</td><td>{{ row.income|floatformat:2 }}</td><td>{{ row.expense|floatformat:2 }}</td></tr>{% endfor %}</tbody></table></details></div></section>
+  <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>Where it’s going</h2><p>Your spending this month</p></div><span class="subtle-link">{{ today|date:"M" }} 1–{{ today|date:"j" }}</span></div>
+    {% if category_rows %}<div class="donut-layout"><div class="donut-wrap"><canvas id="categories" role="img" aria-label="Expenses by category; values listed alongside"></canvas><div class="donut-center"><span>TOTAL SPENT</span><strong>{{ expense|floatformat:"0g" }}</strong><small>{{ CURRENCY }}</small></div></div><div class="category-legend">{% for row in category_rows|slice:':5' %}<div class="category-legend-row"><i class="category-dot" style="background:{{ row.color }}"></i><span>{{ row.name }}</span><strong>{{ row.percent }}%</strong></div>{% endfor %}</div></div><div class="spending-note">{{ category_rows.0.name }} is your largest category · {{ category_rows.0.amount|floatformat:"2g" }} {{ CURRENCY }}</div>{% else %}<div class="empty-state">A clearer picture with every entry.<br><a href="{% url 'transaction-create' %}">Add your first expense →</a></div>{% endif %}
+  </div></section>
 </div>
-
+<div class="dashboard-bottom">
+  <div class="section-stack">
+    <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>Recent activity</h2><p>The little things that add up</p></div><a class="subtle-link" href="{% url 'transaction-list' %}">All transactions →</a></div><table class="table recent-table mb-0"><thead><tr><th>Transaction</th><th class="desktop-column">Category</th><th class="text-end">Amount</th></tr></thead><tbody>{% for t in recent %}<tr><td><a class="transaction-name" href="{% url 'transaction-update' t.pk %}"><span class="transaction-icon {{ t.kind }}">{% if t.kind == 'income' %}↙{% elif t.kind == 'transfer' %}⇄{% else %}↗{% endif %}</span><span class="transaction-detail">{{ t.description|default:t.get_kind_display }}<small>{{ t.date|date:"j M" }} · {{ t.account }}</small></span></a></td><td class="desktop-column"><span class="category-pill">{{ t.category|default:t.get_kind_display }}</span></td><td class="text-end amount {% if t.kind == 'income' %}text-success{% endif %}">{% if t.kind == 'expense' %}−{% elif t.kind == 'income' %}+{% endif %}{{ t.amount|floatformat:"2g" }}<small class="d-block text-muted">{{ CURRENCY }}</small></td></tr>{% empty %}<tr><td colspan="3" class="empty-state">Your story starts with your first transaction.<br><a href="{% url 'transaction-create' %}">Add one now →</a></td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>Your accounts</h2><p>Everything in its place</p></div><a class="subtle-link" href="{% url 'account-list' %}">Manage →</a></div><div class="account-preview">{% for account,balance in accounts %}<a href="{% url 'transaction-list' %}?account={{ account.pk }}"><span>▣ &nbsp; {{ account.name }}</span><strong>{{ balance|floatformat:"2g" }} <small>{{ CURRENCY }}</small></strong></a>{% empty %}<a href="{% url 'account-create' %}">+ Create an account</a>{% endfor %}</div></div></section>
+  </div>
+  <div class="section-stack">
+    <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>Your spending, with a plan</h2><p>Your monthly category budgets</p></div><a class="subtle-link" href="{% url 'budget-list' %}">Manage →</a></div>{% for row in budget_summary.rows|slice:':3' %}<div class="budget-row"><div class="budget-row-head"><span>{{ row.category.name }}</span><span>{{ row.spent|floatformat:"0g" }} <small>/ {{ row.amount|floatformat:"0g" }} {{ CURRENCY }}</small></span></div><div class="progress" role="progressbar" aria-label="{{ row.category.name }} budget used" aria-valuenow="{{ row.percent }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar {% if row.status == 'over' %}danger{% elif row.status == 'ahead' %}warning{% endif %}" style="width:{{ row.percent }}%"></div></div><div class="budget-caption"><span>{{ row.status_label }}</span><span>{{ row.used_percent }}% used</span></div></div>{% empty %}<div class="empty-state">Give your spending a little direction.<br><a href="{% url 'budget-create' %}">Create your first budget →</a></div>{% endfor %}</div></section>
+    <section class="card"><div class="card-body"><div class="panel-heading"><div><h2>On the horizon</h2><p>Upcoming bills · next 30 days</p></div><a class="subtle-link" href="{% url 'recurring-list' %}">View all →</a></div>{% for day,name,amount in upcoming %}<div class="due-row"><div class="due-date">{{ day|date:"j" }}<small>{{ day|date:"M" }}</small></div><div class="due-name">{{ name }}<small>Scheduled expense</small></div><span class="due-amount">{{ amount|floatformat:"2g" }} <small>{{ CURRENCY }}</small></span></div>{% empty %}<div class="empty-state">No bills scheduled in the next 30 days.<br><a href="{% url 'recurring-create' %}">Add a recurring bill →</a></div>{% endfor %}{% for row in goal_preview|slice:':1' %}<div class="goal-mini"><div class="d-flex justify-content-between"><strong>◎ &nbsp; {{ row.goal.name }}</strong><a class="subtle-link" href="{% url 'goal-list' %}">{{ row.percent }}% there ↗</a></div><div class="progress"><div class="progress-bar" style="width:{{ row.percent }}%"></div></div><small>{{ row.goal.saved_so_far|floatformat:"0g" }} of {{ row.goal.target_amount|floatformat:"0g" }} {{ CURRENCY }} saved</small></div>{% endfor %}</div></section>
+  </div>
+</div>
 {{ chart|json_script:"chart-data" }}
 {% endblock %}
+{% block scripts %}<script src="{% static 'vendor/chart.umd.min.js' %}"></script><script src="{% static 'dashboard.js' %}"></script>{% endblock %}
 
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script>
-  const data = JSON.parse(document.getElementById('chart-data').textContent);
-  new Chart(document.getElementById('history'), {
-    type: 'bar',
-    data: {
-      labels: data.history.labels,
-      datasets: [
-        {label: 'Income', data: data.history.income, backgroundColor: '#198754'},
-        {label: 'Expenses', data: data.history.expense, backgroundColor: '#dc3545'},
-      ],
-    },
-    options: {responsive: true, scales: {y: {beginAtZero: true}}},
-  });
-  if (data.categories.labels.length) {
-    new Chart(document.getElementById('categories'), {
-      type: 'doughnut',
-      data: {labels: data.categories.labels, datasets: [{data: data.categories.values}]},
-      options: {plugins: {legend: {position: 'bottom'}}},
-    });
-  } else {
-    document.getElementById('categories').classList.add('d-none');
-    document.getElementById('no-categories').classList.remove('d-none');
-  }
-</script>
-{% endblock %}

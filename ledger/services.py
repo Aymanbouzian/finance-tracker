@@ -53,13 +53,23 @@ def totals_between(user, start, end):
 
 
 def expense_breakdown(user, start, end):
+    """Sum expenses by display label, coalescing labels before ranking totals.
+
+    An explicitly named "Uncategorized" category shares its visible label with
+    records that have no category. Combining them keeps charts and comparison
+    baselines consistent without losing either group's spending.
+    """
     rows = (
         Transaction.objects.filter(user=user, kind=Transaction.EXPENSE, date__gte=start, date__lte=end)
         .values("category__name")
         .annotate(total=Sum("amount"))
-        .order_by("-total")
+        .order_by()
     )
-    return [(row["category__name"] or "Uncategorized", row["total"]) for row in rows]
+    totals = {}
+    for row in rows:
+        label = row["category__name"] or "Uncategorized"
+        totals[label] = totals.get(label, ZERO) + row["total"]
+    return sorted(totals.items(), key=lambda item: (-item[1], item[0]))
 
 
 def monthly_history(user, today, months=6):
@@ -68,6 +78,6 @@ def monthly_history(user, today, months=6):
     for offset in range(months - 1, -1, -1):
         start = add_months(first, -offset)
         _, end = month_bounds(start.year, start.month)
-        income, expense = totals_between(user, start, end)
+        income, expense = totals_between(user, start, min(end, today))
         history.append({"label": start.strftime("%b %Y"), "income": income, "expense": expense})
     return history

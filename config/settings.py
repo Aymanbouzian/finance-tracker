@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+FLUTTER_WEB_DIR = Path(os.environ.get("FLUTTER_WEB_DIR", str(BASE_DIR / "flutter_app" / "build" / "web")))
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-not-for-production")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
@@ -27,6 +28,10 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "ledger",
     "planning",
+    "budgets",
+    "assistant",
+    "core",
+    "clientapi",
 ]
 
 MIDDLEWARE = [
@@ -34,8 +39,10 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "clientapi.middleware.ApiResponseMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.PrivateResponseMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -91,6 +98,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -102,6 +110,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
+CSRF_FAILURE_VIEW = "clientapi.views.csrf_failure"
 
 # Single display currency for the whole app (amounts are not converted).
 CURRENCY = os.environ.get("APP_CURRENCY", "MAD")
+
+# AI stays disabled until the server owner explicitly enables their Ollama host.
+OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "0") == "1"
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "45"))
